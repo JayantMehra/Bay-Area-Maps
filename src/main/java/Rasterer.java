@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,21 +9,18 @@ import java.util.Map;
  */
 public class Rasterer {
 
-    private ArrayList<ArrayList<String>> images_to_be_rendered;
-    private Double raster_ul_lon;
-    private Double raster_ul_lat;
-    private Double raster_lr_lon;
-    private Double raster_lr_lat;
-    private Integer depth;
-    private Boolean query_success;
+    private String[][] renderGrid;
+    private static  double[] lonDPPs;
 
-    private static double[] lon_dpps = {0.0003433227539063, 0.000171661376953125,
-            0.0000858306884765625, 0.00004291534423828125, 0.0000286102294921875, 0.000021457672119140625,
-            0.0000171661376953125, 0.00001430511474609375};
-
+    static {
+        lonDPPs = new double[]{
+                0.00034332275390625, 0.000171661376953125, 0.0000858306884765625, 0.00004291534423828125,
+                0.000021457672119140625, 0.000010728836059570312, 0.000005364418029785156, 0.00000268220901489258
+                };
+    }
 
     public Rasterer() {
-        images_to_be_rendered = new ArrayList<ArrayList<String>>();
+
     }
 
     /**
@@ -56,29 +52,110 @@ public class Rasterer {
      *                    forget to set this to true on success! <br>
      */
     public Map<String, Object> getMapRaster(Map<String, Double> params) {
-        // System.out.println(params);
+        System.out.println(params);
 
-        double required_lonDPP = (params.get("lrlon") - params.get("ullon"))/params.get("w");
+        double currentLonDPP = getLonDPP(params.get("lrlon"), params.get("ullon"), params.get("w"));
+        int currentDepth = getDepthLevel(currentLonDPP);
 
-        int resolution_level = getResolutionLevel(required_lonDPP);
+        //  Get raster_ul_lon for the current depth
+        double prev = -122.2998046875;
+        double next = calculateNext(currentDepth,-122.2998046875,-122.2119140625);
+        double stride = next - prev;
+
+        int lon_start = 0;
+        int lon_end = 0;
+        double raster_ul_lon = 0.0;
+        double raster_lr_lon = 0.0;
 
 
+        int numberOfImgs = (int) (Math.pow(2, currentDepth) - 1);
+
+        for (int i = 0; i <= numberOfImgs; i++) {
+            if (params.get("ullon") >= prev && params.get("ullon") <= next) {
+                lon_start = i;
+                raster_ul_lon = prev;
+                break;
+            }
+            else {
+                prev = next;
+                next += stride;
+            }
+        }
+
+        //  Get raster_lr_lon for the current depth
+        for (int i = lon_start; i <= numberOfImgs; i++) {
+            if (params.get("lrlon") >= prev && params.get("lrlon") <= next) {
+
+                lon_end = i;
+                raster_lr_lon = next;
+                break;
+            }
+            else {
+                prev = next;
+                next += stride;
+            }
+        }
+
+        //  Get raster_ul_lat for the current depth
+        prev = 37.892195547244356;
+        next = calculateNext(currentDepth, 37.892195547244356, 37.82280243352756);
+        stride = prev - next;
+
+        int lat_start = 0;
+        int lat_end = 0;
+        double raster_ul_lat = 0.0;
+        double raster_lr_lat = 0.0;
+
+        for (int j = 0; j <= numberOfImgs; j++) {
+            if (params.get("ullat") <= prev && params.get("ullat") >= next) {
+                lat_start = j;
+                raster_ul_lat = prev;
+                break;
+            }
+            else {
+                prev = next;
+                next -= stride;
+            }
+        }
+
+        //  Get raster_lr_lat
+        for (int j = lat_start; j <= numberOfImgs; j++) {
+            if (params.get("lrlat") <= prev && params.get("lrlat") >= next) {
+                lat_end = j;
+                raster_lr_lat = next;
+                break;
+            }
+            else {
+                prev = next;
+                next -= stride;
+            }
+        }
 
         Map<String, Object> results = new HashMap<>();
-        System.out.println("Since you haven't implemented getMapRaster, nothing is displayed in "
-                           + "your browser.");
+
         return results;
     }
 
-    public static int getResolutionLevel(double lonDPP) {
-
-        for (int i = 0; i < lon_dpps.length; i++) {
-            if (lon_dpps[i] <= lonDPP)
-                return i;
-        }
-
-        return 7;
-
+    private double getLonDPP(Double lrlon, Double ullon, Double w) {
+        return (lrlon.doubleValue() - ullon.doubleValue()) / w.doubleValue();
     }
 
+    private int getDepthLevel(double currentLonDPP) {
+        for (int i = 0; i < lonDPPs.length; i++) {
+            if (lonDPPs[i] <= currentLonDPP)
+                return i;
+        }
+        return 7;
+    }
+
+    private double calculateNext(int currentDepth, double s, double e) {
+        double end = e;
+        double temp = end;
+
+        for (int i = 1; i <= currentDepth; i++) {
+            temp = (s + end) / 2;
+            end = temp;
+        }
+        return temp;
+    }
 }
