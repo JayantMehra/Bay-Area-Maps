@@ -52,12 +52,18 @@ public class Rasterer {
      *                    forget to set this to true on success! <br>
      */
     public Map<String, Object> getMapRaster(Map<String, Double> params) {
-        System.out.println(params);
+
+        System.out.printf("Params:%s%n", params);
 
         double currentLonDPP = getLonDPP(params.get("lrlon"), params.get("ullon"), params.get("w"));
         int currentDepth = getDepthLevel(currentLonDPP);
 
-        //  Get raster_ul_lon for the current depth
+        /*
+            To Do: Break into multiple functions. Hard to read.
+
+         */
+
+        //  Get longitude bounds for the current depth
         double prev = -122.2998046875;
         double next = calculateNext(currentDepth,-122.2998046875,-122.2119140625);
         double stride = next - prev;
@@ -70,6 +76,7 @@ public class Rasterer {
 
         int numberOfImgs = (int) (Math.pow(2, currentDepth) - 1);
 
+        //  Get raster_ul_lon for current depth
         for (int i = 0; i <= numberOfImgs; i++) {
             if (params.get("ullon") >= prev && params.get("ullon") <= next) {
                 lon_start = i;
@@ -96,7 +103,7 @@ public class Rasterer {
             }
         }
 
-        //  Get raster_ul_lat for the current depth
+        //  Get latitude bounds for the current depth
         prev = 37.892195547244356;
         next = calculateNext(currentDepth, 37.892195547244356, 37.82280243352756);
         stride = prev - next;
@@ -106,6 +113,7 @@ public class Rasterer {
         double raster_ul_lat = 0.0;
         double raster_lr_lat = 0.0;
 
+        //  Get raster_ul_lat
         for (int j = 0; j <= numberOfImgs; j++) {
             if (params.get("ullat") <= prev && params.get("ullat") >= next) {
                 lat_start = j;
@@ -130,6 +138,12 @@ public class Rasterer {
                 next -= stride;
             }
         }
+        System.out.println("raster_ul_lon: " + raster_ul_lon);
+        System.out.println("raster_ul_lat: " + raster_ul_lat);
+        System.out.println("raster_lr_lon: " + raster_lr_lon);
+        System.out.println("raster_lr_lat: " + raster_lr_lat);
+        System.out.println("lon bounds: " + lon_start + " " + lon_end);
+        System.out.println("lat bounds: " + lat_start + " " + lat_end);
 
         Map<String, Object> results = new HashMap<>();
 
