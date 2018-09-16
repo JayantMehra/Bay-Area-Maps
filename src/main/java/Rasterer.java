@@ -10,8 +10,12 @@ import java.util.Map;
  */
 public class Rasterer {
 
+    /*
+        To-Do: Break getMapRaster() into multiple functions for readability of code and add error handling.
+     */
+
     private String[][] renderGrid;
-    private static  double[] lonDPPs;
+    private static  double[] lonDPPs;   //  Resolution at each of the 8 depth levels. Pre-calculated.
 
     static {
         lonDPPs = new double[]{
@@ -54,19 +58,18 @@ public class Rasterer {
      */
     public Map<String, Object> getMapRaster(Map<String, Double> params) {
 
-        System.out.printf("Params:%s%n", params);
-
-        double currentLonDPP = getLonDPP(params.get("lrlon"), params.get("ullon"), params.get("w"));
-        int currentDepth = getDepthLevel(currentLonDPP);
-
         /*
             To Do: Break into multiple functions. Hard to read.
 
          */
 
+        double currentLonDPP = getLonDPP(params.get("lrlon"), params.get("ullon"), params.get("w"));
+        int currentDepth = getDepthLevel(currentLonDPP);
+
+
         //  Get longitude bounds for the current depth
-        double prev = -122.2998046875;
-        double next = calculateNext(currentDepth,-122.2998046875,-122.2119140625);
+        double prev = MapServer.ROOT_ULLON;
+        double next = calculateNext(currentDepth,MapServer.ROOT_ULLON, MapServer.ROOT_LRLON);
         double stride = next - prev;
 
         int lon_start = 0;
@@ -105,8 +108,8 @@ public class Rasterer {
         }
 
         //  Get latitude bounds for the current depth
-        prev = 37.892195547244356;
-        next = calculateNext(currentDepth, 37.892195547244356, 37.82280243352756);
+        prev = MapServer.ROOT_ULLAT;
+        next = calculateNext(currentDepth, MapServer.ROOT_ULLAT, MapServer.ROOT_LRLAT);
         stride = prev - next;
 
         int lat_start = 0;
@@ -140,18 +143,10 @@ public class Rasterer {
             }
         }
 
-        /*
-        System.out.println("raster_ul_lon: " + raster_ul_lon);
-        System.out.println("raster_ul_lat: " + raster_ul_lat);
-        System.out.println("raster_lr_lon: " + raster_lr_lon);
-        System.out.println("raster_lr_lat: " + raster_lr_lat);
-        System.out.println("lon bounds: " + lon_start + " " + lon_end);
-        System.out.println("lat bounds: " + lat_start + " " + lat_end);
-        */
-
         renderGrid = new String[lat_end - lat_start + 1][lon_end - lon_start + 1];
         int r_pos = 0;
 
+        //  Build the render grid containing the appropriate file names
         for (int i = lat_start; i <= lat_end; i++) {
             String[] row = new String[lon_end - lon_start + 1];
             int c_pos = 0;
@@ -160,14 +155,6 @@ public class Rasterer {
                 row[c_pos++] = temp;
             }
             renderGrid[r_pos++] = row;
-        }
-
-        // Print
-
-        for (int i = 0; i < renderGrid.length; i++) {
-            for (int j = 0; j < renderGrid[0].length; j++)
-                System.out.print(renderGrid[i][j] + " ");
-            System.out.print("\n");
         }
 
         Map<String, Object> results = new HashMap<>();
