@@ -1,6 +1,7 @@
 import java.util.HashMap;
 import java.util.Map;
 
+
 /**
  * This class provides all code necessary to take a query box and produce
  * a query result. The getMapRaster method must return a Map containing all
@@ -138,14 +139,46 @@ public class Rasterer {
                 next -= stride;
             }
         }
+
+        /*
         System.out.println("raster_ul_lon: " + raster_ul_lon);
         System.out.println("raster_ul_lat: " + raster_ul_lat);
         System.out.println("raster_lr_lon: " + raster_lr_lon);
         System.out.println("raster_lr_lat: " + raster_lr_lat);
         System.out.println("lon bounds: " + lon_start + " " + lon_end);
         System.out.println("lat bounds: " + lat_start + " " + lat_end);
+        */
+
+        renderGrid = new String[lat_end - lat_start + 1][lon_end - lon_start + 1];
+        int r_pos = 0;
+
+        for (int i = lat_start; i <= lat_end; i++) {
+            String[] row = new String[lon_end - lon_start + 1];
+            int c_pos = 0;
+            for (int j = lon_start; j <= lon_end; j++) {
+                String temp = buildString(i, j, currentDepth);
+                row[c_pos++] = temp;
+            }
+            renderGrid[r_pos++] = row;
+        }
+
+        // Print
+
+        for (int i = 0; i < renderGrid.length; i++) {
+            for (int j = 0; j < renderGrid[0].length; j++)
+                System.out.print(renderGrid[i][j] + " ");
+            System.out.print("\n");
+        }
 
         Map<String, Object> results = new HashMap<>();
+
+        results.put("render_grid", renderGrid);
+        results.put("raster_ul_lon", raster_ul_lon);
+        results.put("raster_ul_lat", raster_ul_lat);
+        results.put("raster_lr_lon", raster_lr_lon);
+        results.put("raster_lr_lat", raster_lr_lat);
+        results.put("depth", currentDepth);
+        results.put("query_success", true);
 
         return results;
     }
@@ -170,6 +203,11 @@ public class Rasterer {
             temp = (s + end) / 2;
             end = temp;
         }
+        return temp;
+    }
+
+    private String buildString(int i, int j, int d) {
+        String temp = "d" + d + "_x" + j + "_y" + i + ".png";
         return temp;
     }
 }
