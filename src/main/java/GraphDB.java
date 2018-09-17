@@ -1,4 +1,5 @@
 import org.xml.sax.SAXException;
+import sun.security.provider.certpath.AdjacencyList;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -7,6 +8,9 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * Graph for storing all of the intersection (vertex) and road (edge) information.
@@ -26,6 +30,7 @@ public class GraphDB {
      * You do not need to modify this constructor, but you're welcome to do so.
      * @param dbPath Path to the XML file to be parsed.
      */
+    private Map<String, Node> adjacencyList;
     public GraphDB(String dbPath) {
         try {
             File inputFile = new File(dbPath);
@@ -34,12 +39,32 @@ public class GraphDB {
 
             SAXParserFactory factory = SAXParserFactory.newInstance();
             SAXParser saxParser = factory.newSAXParser();
+            adjacencyList = new HashMap<>();
             GraphBuildingHandler gbh = new GraphBuildingHandler(this);
             saxParser.parse(inputStream, gbh);
         } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
         }
         clean();
+    }
+
+    /*
+        Code to add nodes and edges as GraphBuildingHandler parses XML
+     */
+
+    public void addNode(String id, String lon, String lat, String name) {
+        Node node = new Node(id, lon, lat, name);
+        adjacencyList.put(id, node);
+    }
+
+    public boolean addEdge(String id_1, String id_2) {
+        Node node = adjacencyList.get(id_1);
+
+        if (node != null) {
+            node.addEdge(id_2);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -58,6 +83,15 @@ public class GraphDB {
      */
     private void clean() {
         // TODO: Your code here.
+        Iterator it = adjacencyList.entrySet().iterator();
+
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            Object node = (Node) pair.getValue();
+            if (((Node) node).edges() == 0) {
+                it.remove();
+            }
+        }
     }
 
     /**
@@ -155,5 +189,35 @@ public class GraphDB {
      */
     double lat(long v) {
         return 0;
+    }
+
+    private class Node {
+
+        private String id;
+        private String lon;
+        private String lat;
+        private String name;
+        private String way_name;
+        private ArrayList edges = new ArrayList<>();
+
+        public Node(String id, String lon, String lat, String name) {
+            this.id = id;
+            this.lon = lon;
+            this.lat = lat;
+            this.name = name;
+        }
+
+        public void addWayNameToNode(String way_name) {
+            this.way_name = way_name;
+        }
+
+        public void addEdge(String id) {
+            edges.add(id);
+        }
+
+        public int edges() {
+            return edges.size();
+        }
+
     }
 }
