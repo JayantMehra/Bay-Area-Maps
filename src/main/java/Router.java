@@ -2,6 +2,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.PriorityQueue;
 
 /**
  * This class provides a shortestPath method for finding routes between two points
@@ -12,6 +15,18 @@ import java.util.regex.Pattern;
  * down to the priority you use to order your vertices.
  */
 public class Router {
+
+    Map<Long, Double> bestKnownDistance;
+    Map<Long, Long> parent;
+    PriorityQueue<Long> fringe;
+
+    public Router() {
+        bestKnownDistance = new HashMap<>();
+        parent = new HashMap<>();
+        fringe = new PriorityQueue<>();
+    }
+
+
     /**
      * Return a List of longs representing the shortest path from the node
      * closest to a start location and the node closest to the destination
