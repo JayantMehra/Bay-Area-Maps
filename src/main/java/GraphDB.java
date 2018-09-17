@@ -1,5 +1,4 @@
 import org.xml.sax.SAXException;
-import sun.security.provider.certpath.AdjacencyList;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -7,10 +6,7 @@ import java.io.IOException;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.*;
 
 /**
  * Graph for storing all of the intersection (vertex) and road (edge) information.
@@ -30,7 +26,8 @@ public class GraphDB {
      * You do not need to modify this constructor, but you're welcome to do so.
      * @param dbPath Path to the XML file to be parsed.
      */
-    private Map<String, Node> adjacencyList;
+    private Map<Long, Node> adjacencyList;
+
     public GraphDB(String dbPath) {
         try {
             File inputFile = new File(dbPath);
@@ -52,16 +49,33 @@ public class GraphDB {
         Code to add nodes and edges as GraphBuildingHandler parses XML
      */
 
-    public void addNode(String id, String lon, String lat, String name) {
-        Node node = new Node(id, lon, lat, name);
-        adjacencyList.put(id, node);
+    public void addNode(Map<String, String> nodeParams) {
+        Node node = new Node(nodeParams.get("lon"), nodeParams.get("lat"), cleanString(nodeParams.get("name")));
+        adjacencyList.put(Long.parseLong(nodeParams.get("id")), node);
     }
 
-    public boolean addEdge(String id_1, String id_2) {
+    public void addEdges(Map<String, ArrayList> edgeParams) {
+        ArrayList<String> temp = edgeParams.get("nodes");
+        ArrayList<String> name = edgeParams.get("name");
+
+
+        for (int i = 1; i < temp.size(); ++i) {
+            addEdge(Long.parseLong(temp.get(i-1)), Long.parseLong(temp.get(i)), cleanString(name.get(0)));
+            addEdge(Long.parseLong(temp.get(i)), Long.parseLong(temp.get(i-1)), cleanString(name.get(0)));
+        }
+
+        //Node node = adjacencyList.get(Long.parseLong(temp.get(temp.size() - 1)));
+        //node.addWayNameToNode(name.get(0));
+
+    }
+
+    public boolean addEdge(Long id_1, Long id_2, String wayName) {
         Node node = adjacencyList.get(id_1);
 
         if (node != null) {
             node.addEdge(id_2);
+
+            node.addWayNameToNode(wayName);
             return true;
         }
         return false;
@@ -88,7 +102,7 @@ public class GraphDB {
         while (it.hasNext()) {
             Map.Entry pair = (Map.Entry) it.next();
             Object node = (Node) pair.getValue();
-            if (((Node) node).edges() == 0) {
+            if (((Node) node).edges.size() == 0) {
                 it.remove();
             }
         }
@@ -100,7 +114,7 @@ public class GraphDB {
      */
     Iterable<Long> vertices() {
         //YOUR CODE HERE, this currently returns only an empty list.
-        return new ArrayList<Long>();
+        return adjacencyList.keySet();
     }
 
     /**
@@ -109,7 +123,10 @@ public class GraphDB {
      * @return An iterable of the ids of the neighbors of v.
      */
     Iterable<Long> adjacent(long v) {
-        return null;
+        Node node = adjacencyList.get(v);
+        if (node == null)
+            return null;
+        return node.edges;
     }
 
     /**
@@ -170,7 +187,23 @@ public class GraphDB {
      * @return The id of the node in the graph closest to the target.
      */
     long closest(double lon, double lat) {
-        return 0;
+        double minDistance = Double.MAX_VALUE;
+        double currentDistance = 0;
+        long closestNodeId = 0;
+
+        Iterator it = adjacencyList.entrySet().iterator();
+
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            Object node = (Node) pair.getValue();
+            currentDistance = distance(lon, lat, Double.parseDouble(((Node) node).lon), Double.parseDouble(((Node) node).lat));
+            if (currentDistance < minDistance) {
+                minDistance = currentDistance;
+                closestNodeId = (Long) pair.getKey();
+            }
+        }
+
+        return closestNodeId;
     }
 
     /**
@@ -179,7 +212,9 @@ public class GraphDB {
      * @return The longitude of the vertex.
      */
     double lon(long v) {
-        return 0;
+        Node node = adjacencyList.get(v);
+        return Double.parseDouble(node.lon);
+
     }
 
     /**
@@ -188,20 +223,19 @@ public class GraphDB {
      * @return The latitude of the vertex.
      */
     double lat(long v) {
-        return 0;
+        Node node = adjacencyList.get(v);
+        return Double.parseDouble(node.lat);
     }
 
     private class Node {
 
-        private String id;
         private String lon;
         private String lat;
         private String name;
         private String way_name;
         private ArrayList edges = new ArrayList<>();
 
-        public Node(String id, String lon, String lat, String name) {
-            this.id = id;
+        public Node(String lon, String lat, String name) {
             this.lon = lon;
             this.lat = lat;
             this.name = name;
@@ -211,13 +245,8 @@ public class GraphDB {
             this.way_name = way_name;
         }
 
-        public void addEdge(String id) {
+        public void addEdge(Long id) {
             edges.add(id);
         }
-
-        public int edges() {
-            return edges.size();
-        }
-
     }
 }

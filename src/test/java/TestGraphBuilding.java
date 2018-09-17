@@ -142,4 +142,22 @@ public class TestGraphBuilding {
         }
         return N;
     }
+    /*
+    public static void main(String [] args) throws Exception {
+
+        TestGraphBuilding t = new TestGraphBuilding();
+        try {
+            t.setUp();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        t.testNodeCountFullGraph();
+        t.testAdjacent();
+        t.testLonAndLat();
+        t.testDistance();
+        t.testClosest();
+        System.out.println("All Tests Passed.");
+    }
+    */
 }
