@@ -76,4 +76,11 @@ public class TestRouter {
         }
         return expected;
     }
+
+    public static void main (String[] args) throws Exception {
+        TestRouter t = new TestRouter();
+        t.setUp();
+        t.testShortestPath();
+        System.out.println("Working as expected!");
+    }
 }

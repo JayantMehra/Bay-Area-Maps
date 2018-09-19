@@ -1,10 +1,6 @@
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.PriorityQueue;
 
 /**
  * This class provides a shortestPath method for finding routes between two points
@@ -16,14 +12,14 @@ import java.util.PriorityQueue;
  */
 public class Router {
 
-    Map<Long, Double> bestKnownDistance;
-    Map<Long, Long> parent;
-    PriorityQueue<Long> fringe;
+    static private Map<Long, Double> bestKnownDistance;
+    static private Map<Long, Long> parent;
+    static private PriorityQueue<Pair> fringe;
 
-    public Router() {
+    static  {
         bestKnownDistance = new HashMap<>();
         parent = new HashMap<>();
-        fringe = new PriorityQueue<>();
+        fringe = new PriorityQueue<>(1, new PairComparator());
     }
 
 
@@ -40,7 +36,63 @@ public class Router {
      */
     public static List<Long> shortestPath(GraphDB g, double stlon, double stlat,
                                           double destlon, double destlat) {
-        return null; // FIXME
+
+        List<Long> shortestPath = new ArrayList<>();
+
+        Long startNodeId = g.closest(stlon, stlat);
+        Long endNodeId = g.closest(destlon, destlat);
+
+        //  Clear all the previous data
+        fringe.clear();
+        bestKnownDistance.clear();
+        parent.clear();
+
+        //  Initialize the fringe with the source vertex
+        fringe.add(new Pair(startNodeId, g.distance(startNodeId, endNodeId)));
+        bestKnownDistance.put(startNodeId, 0.0);
+        parent.put(startNodeId, null);
+
+        boolean found = false;
+
+        if (startNodeId != endNodeId) {
+            while (!fringe.isEmpty()) {
+                Pair p = fringe.poll();
+                Long currentId = p.id;
+
+                ArrayList<Long> adjacent = (ArrayList<Long>) g.adjacent(currentId);
+
+                for (Long vertex : adjacent) {
+                    if (vertex == endNodeId) {
+                        bestKnownDistance.put(vertex, bestKnownDistance.get(currentId) + g.distance(currentId, vertex));
+                        parent.put(vertex, currentId);
+                        found = true;
+                        break;
+                    }
+                    //  Relax the edge(/vertex)
+
+                    if (bestKnownDistance.get(vertex) == null || bestKnownDistance.get(vertex) > bestKnownDistance.get(currentId) + g.distance(currentId, vertex)) {
+                        bestKnownDistance.put(vertex, bestKnownDistance.get(currentId) + g.distance(currentId, vertex));
+                        parent.put(vertex, currentId);
+                        fringe.add(new Pair(vertex, bestKnownDistance.get(currentId) + g.distance(currentId, vertex) + g.distance(vertex, endNodeId)));
+                    }
+                }
+
+                if (found)
+                    break;
+            }
+        }
+
+        shortestPath.add(endNodeId);
+        Long temp = parent.get(endNodeId);
+
+        while (temp != null) {
+            shortestPath.add(temp);
+            temp = parent.get(temp);
+        }
+
+        Collections.reverse(shortestPath);
+
+        return shortestPath;
     }
 
     /**
@@ -55,6 +107,24 @@ public class Router {
         return null; // FIXME
     }
 
+    private static class PairComparator implements Comparator<Pair> {
+        public int compare(Pair p1, Pair p2) {
+            if (p1.priority > p2.priority)
+                return 1;
+            else if (p1.priority < p2.priority)
+                return -1;
+            return 0;
+        }
+    }
+    private static class Pair {
+        Long id;
+        Double priority;
+
+        Pair (Long id, Double priority) {
+            this.id = id;
+            this.priority = priority;
+        }
+    }
 
     /**
      * Class to represent a navigation direction, which consists of 3 attributes:

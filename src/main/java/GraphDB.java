@@ -227,6 +227,11 @@ public class GraphDB {
         return Double.parseDouble(node.lat);
     }
 
+    /**
+     * Class to represent a single node in the graph which consists of
+     * a longitude, latitude, name (optional), way name (optional), and
+     * a list of adjacent vertices.
+     */
     private class Node {
 
         private String lon;
