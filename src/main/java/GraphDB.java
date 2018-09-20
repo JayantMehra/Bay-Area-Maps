@@ -27,6 +27,7 @@ public class GraphDB {
      * @param dbPath Path to the XML file to be parsed.
      */
     private Map<Long, Node> adjacencyList;
+    private Map<String, ArrayList<Map<String, Object>>> nameMap;
 
     public GraphDB(String dbPath) {
         try {
@@ -37,6 +38,7 @@ public class GraphDB {
             SAXParserFactory factory = SAXParserFactory.newInstance();
             SAXParser saxParser = factory.newSAXParser();
             adjacencyList = new HashMap<>();
+            nameMap = new HashMap<>();
             GraphBuildingHandler gbh = new GraphBuildingHandler(this);
             saxParser.parse(inputStream, gbh);
         } catch (ParserConfigurationException | SAXException | IOException e) {
@@ -50,8 +52,9 @@ public class GraphDB {
      */
 
     public void addNode(Map<String, String> nodeParams) {
-        Node node = new Node(nodeParams.get("lon"), nodeParams.get("lat"), cleanString(nodeParams.get("name")));
+        Node node = new Node(nodeParams.get("lon"), nodeParams.get("lat"), nodeParams.get("name"));
         adjacencyList.put(Long.parseLong(nodeParams.get("id")), node);
+        insertIntoNameMap(nodeParams.get("lon"), nodeParams.get("lat"), nodeParams.get("name"), nodeParams.get("id"));
     }
 
     public void addEdges(Map<String, ArrayList> edgeParams) {
@@ -60,8 +63,8 @@ public class GraphDB {
 
 
         for (int i = 1; i < temp.size(); ++i) {
-            addEdge(Long.parseLong(temp.get(i-1)), Long.parseLong(temp.get(i)), cleanString(name.get(0)));
-            addEdge(Long.parseLong(temp.get(i)), Long.parseLong(temp.get(i-1)), cleanString(name.get(0)));
+            addEdge(Long.parseLong(temp.get(i-1)), Long.parseLong(temp.get(i)), name.get(0));
+            addEdge(Long.parseLong(temp.get(i)), Long.parseLong(temp.get(i-1)), name.get(0));
         }
 
         //Node node = adjacencyList.get(Long.parseLong(temp.get(temp.size() - 1)));
@@ -79,6 +82,10 @@ public class GraphDB {
             return true;
         }
         return false;
+    }
+
+    public ArrayList<Map<String, Object>> locations(String s) {
+        return nameMap.get(cleanString(s));
     }
 
     /**
@@ -104,6 +111,25 @@ public class GraphDB {
             Object node = (Node) pair.getValue();
             if (((Node) node).edges.size() == 0) {
                 it.remove();
+            }
+        }
+    }
+
+    private void insertIntoNameMap(String lon, String lat, String name, String id) {
+        Map<String, Object> temp = new HashMap<>();
+        temp.put("lat", Double.parseDouble(lat));
+        temp.put("lon", Double.parseDouble(lon));
+        temp.put("name", name);
+        temp.put("id", Long.parseLong(id));
+
+        String cleanName = cleanString(name);
+        if (cleanName != "") {
+            if (nameMap.get(cleanName) == null) {
+                ArrayList<Map<String, Object>> alist = new ArrayList<>();
+                alist.add(temp);
+                nameMap.put(cleanName, alist);
+            } else {
+                nameMap.get(cleanName).add(temp);
             }
         }
     }
@@ -228,6 +254,16 @@ public class GraphDB {
     }
 
     /**
+     * Gets the way name the vertex is on
+     * @param v the id of the vertex
+     * @return The way name of the vertex
+     */
+    String wayName(Long v) {
+        Node node = adjacencyList.get(v);
+        return node.way_name;
+    }
+
+    /**
      * Class to represent a single node in the graph which consists of
      * a longitude, latitude, name (optional), way name (optional), and
      * a list of adjacent vertices.
@@ -247,7 +283,10 @@ public class GraphDB {
         }
 
         public void addWayNameToNode(String way_name) {
-            this.way_name = way_name;
+            if (way_name != "")
+                this.way_name = way_name;
+            else
+                this.way_name = "unknown road";
         }
 
         public void addEdge(Long id) {

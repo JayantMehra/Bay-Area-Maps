@@ -81,6 +81,7 @@ public class TestRouter {
         TestRouter t = new TestRouter();
         t.setUp();
         t.testShortestPath();
+        t.testShortestPath();
         System.out.println("Working as expected!");
     }
 }

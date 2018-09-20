@@ -1,4 +1,6 @@
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,7 +39,7 @@ public class Router {
     public static List<Long> shortestPath(GraphDB g, double stlon, double stlat,
                                           double destlon, double destlat) {
 
-        List<Long> shortestPath = new ArrayList<>();
+        ArrayList<Long> shortestPath = new ArrayList<>();
 
         Long startNodeId = g.closest(stlon, stlat);
         Long endNodeId = g.closest(destlon, destlat);
@@ -100,11 +102,71 @@ public class Router {
      * @param g The graph to use.
      * @param route The route to translate into directions. Each element
      *              corresponds to a node from the graph in the route.
-     * @return A list of NavigatiionDirection objects corresponding to the input
+     * @return A list of NavigationDirection objects corresponding to the input
      * route.
      */
     public static List<NavigationDirection> routeDirections(GraphDB g, List<Long> route) {
-        return null; // FIXME
+
+        ArrayList<NavigationDirection> routeDirections = new ArrayList<>();
+
+        NavigationDirection dir = new NavigationDirection();
+        dir.direction = 0;
+        dir.distance = 0;
+        dir.way = g.wayName(route.get(0));
+
+
+        int counter = 0;
+
+        for (int i = 1; i < route.size(); i++) {
+            double relativeBearing = g.bearing(route.get(i-1), route.get(i));
+            String currentWay = g.wayName(route.get(i));
+
+            if ( ! currentWay.equals(dir.way) ) {
+
+                if (dir.distance != 0)
+                    routeDirections.add(dir);
+
+                dir = new NavigationDirection();
+                dir.way = g.wayName(route.get(i));
+                dir.distance = 0;
+
+                if (relativeBearing >= -15 && relativeBearing <= 15)
+                    dir.direction = 1;
+                else if (relativeBearing < -15 && relativeBearing >= -30)
+                    dir.direction = 2;
+                else if (relativeBearing > 15 && relativeBearing <= 30)
+                    dir.direction = 3;
+                else if (relativeBearing < -30 && relativeBearing >= -100)
+                    dir.direction = 5;
+                else if (relativeBearing > 30 && relativeBearing <= 100)
+                    dir.direction = 4;
+                else if (relativeBearing < -100)
+                    dir.direction = 6;
+                else if (relativeBearing > 100)
+                    dir.direction = 7;
+            }
+            else {
+                dir.distance += g.distance(route.get(i), route.get(i-1));
+            }
+        }
+
+        routeDirections.add(dir);
+        return routeDirections;
+    }
+
+
+    /**
+     * Class to represent a pair associating an id with a priority for
+     * the fringe.
+     */
+    private static class Pair {
+        Long id;
+        Double priority;
+
+        Pair (Long id, Double priority) {
+            this.id = id;
+            this.priority = priority;
+        }
     }
 
     private static class PairComparator implements Comparator<Pair> {
@@ -114,15 +176,6 @@ public class Router {
             else if (p1.priority < p2.priority)
                 return -1;
             return 0;
-        }
-    }
-    private static class Pair {
-        Long id;
-        Double priority;
-
-        Pair (Long id, Double priority) {
-            this.id = id;
-            this.priority = priority;
         }
     }
 
