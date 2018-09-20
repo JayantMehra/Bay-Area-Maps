@@ -151,7 +151,20 @@ public class Router {
         }
 
         routeDirections.add(dir);
-        return routeDirections;
+        ArrayList<NavigationDirection> routeDirectionsCleaned = new ArrayList<>();
+
+        for (int i = 0; i < routeDirections.size();) {
+            String currentName = routeDirections.get(i).way;
+            int j = i + 1;
+            while ( j < routeDirections.size() && routeDirections.get(j).way.equals(currentName)) {
+                routeDirections.get(i).distance += routeDirections.get(j).distance;
+                j++;
+            }
+            routeDirectionsCleaned.add(routeDirections.get(i));
+            i = j;
+        }
+
+        return routeDirectionsCleaned;
     }
 
 
