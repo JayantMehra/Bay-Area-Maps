@@ -28,6 +28,7 @@ public class GraphDB {
      */
     private Map<Long, Node> adjacencyList;
     private Map<String, ArrayList<Map<String, Object>>> nameMap;
+    private Trie t;
 
     public GraphDB(String dbPath) {
         try {
@@ -39,6 +40,7 @@ public class GraphDB {
             SAXParser saxParser = factory.newSAXParser();
             adjacencyList = new HashMap<>();
             nameMap = new HashMap<>();
+            t = new Trie();
             GraphBuildingHandler gbh = new GraphBuildingHandler(this);
             saxParser.parse(inputStream, gbh);
         } catch (ParserConfigurationException | SAXException | IOException e) {
@@ -55,6 +57,10 @@ public class GraphDB {
         Node node = new Node(nodeParams.get("lon"), nodeParams.get("lat"), nodeParams.get("name"));
         adjacencyList.put(Long.parseLong(nodeParams.get("id")), node);
         insertIntoNameMap(nodeParams.get("lon"), nodeParams.get("lat"), nodeParams.get("name"), nodeParams.get("id"));
+
+        if (cleanString(nodeParams.get("name")) != "" && cleanString(nodeParams.get("name")) != " ") {
+            t.insert(cleanString(nodeParams.get("name")), nodeParams.get("name"));
+        }
     }
 
     public void addEdges(Map<String, ArrayList> edgeParams) {
@@ -263,6 +269,16 @@ public class GraphDB {
         return node.way_name;
     }
 
+    ArrayList<String> matchingLocations(String prefix) {
+        ArrayList<String> alist = new ArrayList<>();
+        HashSet<String> temp = (HashSet<String>) t.collect(cleanString(prefix));
+
+        for (String loc : temp)
+            alist.add(loc);
+
+        return alist;
+    }
+
     /**
      * Class to represent a single node in the graph which consists of
      * a longitude, latitude, name (optional), way name (optional), and
@@ -293,4 +309,95 @@ public class GraphDB {
             edges.add(id);
         }
     }
+
+    private static class Trie {
+
+        static final int SIZE = 26;
+
+        static TrieNode root;
+
+        Trie() {
+            root = new TrieNode();
+        }
+
+        static void insert(String key, String value) {
+            TrieNode temp = root;
+            int size = key.length();
+            int index;
+
+            for (int i = 0; i < size; i++) {
+                if (key.charAt(i) == ' ')
+                    continue;
+
+                index = (int) key.charAt(i) - 'a';
+                if (temp.children[index] == null) {
+                    temp.children[index] = new TrieNode();
+                }
+                temp = temp.children[index];
+            }
+            temp.isEndOfWord = true;
+            temp.fullName = value;
+        }
+
+        static Set<String> collect(String prefix) {
+            System.out.println(prefix);
+            Set<String> matches = new HashSet<>();
+
+            TrieNode temp = root;
+            int size = prefix.length();
+            int index;
+
+            for (int i = 0; i < size - 1; i++) {
+                if (prefix.charAt(i) == ' ')
+                    continue;
+
+                index = prefix.charAt(i) - 'a';
+
+                if(temp.children[index] == null)
+                    return matches;
+                temp = temp.children[index];
+            }
+            index = size - 1;
+            if (temp.children[index] == null)
+                return matches;
+            else {
+                if (temp.isEndOfWord)
+                    matches.add(prefix);
+
+                temp = temp.children[index];
+            }
+
+            collectHelper(temp, matches);
+
+            return matches;
+        }
+
+        static void collectHelper(TrieNode root, Set<String> matches) {
+            System.out.println("Helper Called");
+            for (int i = 0; i < root.children.length; i++) {
+
+                if (root.isEndOfWord)
+                    matches.add(root.fullName);
+
+                if (root.children[i] == null)
+                    continue;
+
+                collectHelper(root.children[i], matches);
+            }
+        }
+
+        private static class TrieNode {
+            TrieNode[] children = new TrieNode[SIZE];
+            boolean isEndOfWord;
+            String fullName;
+
+            TrieNode() {
+                for (TrieNode node : children)
+                    node = null;
+                isEndOfWord = false;
+            }
+        }
+    }
+
+
 }
